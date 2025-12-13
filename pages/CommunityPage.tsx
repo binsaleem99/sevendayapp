@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { MessageSquare, Calendar, FileText, Loader, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import PostCard from '../components/community/PostCard';
@@ -32,8 +31,9 @@ const CommunityPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'posts' | 'events' | 'files'>('posts');
-  const [activeFilter, setActiveFilter] = useState('general');
+  // State management
+  const [activeFilter, setActiveFilter] = useState('posts'); // 'posts' | 'events' | 'files'
+  const [activeCategory, setActiveCategory] = useState('general'); // For posts subcategories
   const [posts, setPosts] = useState<Post[]>([]);
   const [stats, setStats] = useState<CommunityStats>({
     total_members: 0,
@@ -50,10 +50,17 @@ const CommunityPage: React.FC = () => {
   const [files, setFiles] = useState<any[]>([]);
   const [showFileUploadModal, setShowFileUploadModal] = useState(false);
 
-  // Check if user is admin (for showing admin link)
   const isAdmin = profile?.is_community_admin || profile?.role === 'admin';
 
+  // Main filters (tabs)
   const filters = [
+    { id: 'posts', label: 'المنشورات' },
+    { id: 'events', label: 'الفعاليات' },
+    { id: 'files', label: 'الملفات' }
+  ];
+
+  // Category filters for posts
+  const categoryFilters = [
     { id: 'general', label: 'عام' },
     { id: 'announcements', label: 'إعلانات' },
     { id: 'success', label: 'قصص نجاح' },
@@ -101,43 +108,61 @@ const CommunityPage: React.FC = () => {
           participants: [],
           author: {
             full_name: post.author?.full_name || 'مستخدم',
-            avatar_url: post.author?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author?.full_name || 'User')}&background=CCFF00&color=000`,
+            avatar_url: post.author?.avatar_url || null,
             level: post.author?.community_level || 1,
             is_admin: post.author?.is_community_admin || false
           }
         })));
       }
 
-      // Load stats
-      const { count: memberCount } = await supabase
+      // Load community stats
+      const { count: membersCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
-      const { count: postCount } = await supabase
+      const { count: postsCount } = await supabase
         .from('community_posts')
         .select('*', { count: 'exact', head: true });
 
-      const { count: adminCount } = await supabase
+      const { count: adminsCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
         .eq('is_community_admin', true);
 
       setStats({
-        total_members: memberCount || 0,
-        online_now: Math.max(1, Math.floor((memberCount || 0) * 0.1)),
-        admins_count: Math.max(1, adminCount || 0),
-        total_posts: postCount || 0
+        total_members: membersCount || 0,
+        online_now: Math.floor((membersCount || 0) * 0.15),
+        admins_count: adminsCount || 0,
+        total_posts: postsCount || 0
       });
 
-    } catch (err) {
-      console.error('Error loading community:', err);
+    } catch (error) {
+      console.error('Error loading community data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+  const loadEvents = async () => {
+    try {
+      const eventsData = await getEvents();
+      setEvents(eventsData || []);
+    } catch (error) {
+      console.error('Error loading events:', error);
+    }
+  };
+
+  const loadFiles = async () => {
+    try {
+      const filesData = await getFiles();
+      setFiles(filesData || []);
+    } catch (error) {
+      console.error('Error loading files:', error);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
@@ -148,270 +173,7 @@ const CommunityPage: React.FC = () => {
     if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
     if (diffHours < 24) return `منذ ${diffHours} ساعة`;
     if (diffDays < 7) return `منذ ${diffDays} يوم`;
-    return date.toLocaleDateString('ar-KW');
-  };
-
-  const handleLoadComments = async (postId: string) => {
-    try {
-      const comments = await getCommentsForPost(postId, user?.id || null);
-      setPostComments(prev => ({ ...prev, [postId]: comments }));
-      setExpandedPosts(prev => new Set(prev).add(postId));
-    } catch (error) {
-      console.error('Error loading comments:', error);
-    }
-  };
-
-  const handleAddComment = async (postId: string, content: string) => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    try {
-      await createComment(postId, user.id, content);
-      await handleLoadComments(postId);
-
-      // Update comments count in posts
-      setPosts(posts.map(p =>
-        p.id === postId ? { ...p, comments_count: p.comments_count + 1 } : p
-      ));
-
-      // Track with PostHog
-      if (typeof window !== 'undefined' && (window as any).posthog) {
-        (window as any).posthog.capture('community_comment_created', { post_id: postId });
-      }
-    } catch (error) {
-      console.error('Error adding comment:', error);
-    }
-  };
-
-  const handleLikeComment = async (postId: string, commentId: string) => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    try {
-      const result = await toggleCommentLike(commentId, user.id);
-      if (result) {
-        // Update the comment in local state
-        setPostComments(prev => ({
-          ...prev,
-          [postId]: prev[postId]?.map(c =>
-            c.id === commentId
-              ? { ...c, likes_count: result.newCount, user_liked: result.liked }
-              : c
-          ) || []
-        }));
-      }
-    } catch (error) {
-      console.error('Error liking comment:', error);
-    }
-  };
-
-  const handleLike = async (postId: string) => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    try {
-      const result = await togglePostLike(postId, user.id);
-      if (result) {
-        setPosts(posts.map(p =>
-          p.id === postId ? { ...p, likes_count: result.newCount } : p
-        ));
-
-        // Track with PostHog
-        if (typeof window !== 'undefined' && (window as any).posthog) {
-          (window as any).posthog.capture('community_post_liked', { post_id: postId, liked: result.liked });
-        }
-      }
-    } catch (error) {
-      console.error('Error toggling like:', error);
-    }
-  };
-
-  const handlePinPost = async (postId: string) => {
-    if (!user || !isAdmin) return;
-
-    try {
-      const success = await togglePostPin(postId, user.id);
-      if (success) {
-        setPosts(posts.map(p =>
-          p.id === postId ? { ...p, is_pinned: !p.is_pinned } : p
-        ));
-      }
-    } catch (error) {
-      console.error('Error pinning post:', error);
-    }
-  };
-
-  const handleDeletePost = async (postId: string) => {
-    if (!user) return;
-
-    try {
-      const success = await deletePost(postId, user.id);
-      if (success) {
-        setPosts(posts.filter(p => p.id !== postId));
-      }
-    } catch (error) {
-      console.error('Error deleting post:', error);
-    }
-  };
-
-  // ============ EVENTS HANDLERS ============
-
-  const loadEvents = async () => {
-    try {
-      const eventsData = await getEvents(user?.id || null);
-      setEvents(eventsData);
-    } catch (error) {
-      console.error('Error loading events:', error);
-    }
-  };
-
-  const handleCreateEvent = async (eventData: any) => {
-    if (!user || !isAdmin) return;
-
-    try {
-      const eventId = await createEvent(eventData, user.id);
-      if (eventId) {
-        // Track with PostHog
-        if (typeof window !== 'undefined' && (window as any).posthog) {
-          (window as any).posthog.capture('community_event_created', {
-            event_type: eventData.event_type,
-            is_online: eventData.is_online,
-            has_capacity_limit: !!eventData.max_attendees
-          });
-        }
-
-        await loadEvents();
-      }
-    } catch (error) {
-      console.error('Error creating event:', error);
-    }
-  };
-
-  const handleRegisterForEvent = async (eventId: string) => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    try {
-      const result = await registerForEvent(eventId, user.id);
-      if (result?.success) {
-        // Update local state
-        setEvents(events.map(e =>
-          e.id === eventId
-            ? { ...e, is_registered: true, attendees_count: result.attendees_count }
-            : e
-        ));
-
-        // Track with PostHog
-        if (typeof window !== 'undefined' && (window as any).posthog) {
-          (window as any).posthog.capture('community_event_registered', { event_id: eventId });
-        }
-      } else if (result?.message) {
-        alert(result.message);
-      }
-    } catch (error) {
-      console.error('Error registering for event:', error);
-    }
-  };
-
-  const handleUnregisterFromEvent = async (eventId: string) => {
-    if (!user) return;
-
-    try {
-      const result = await unregisterFromEvent(eventId, user.id);
-      if (result?.success) {
-        // Update local state
-        setEvents(events.map(e =>
-          e.id === eventId
-            ? { ...e, is_registered: false, attendees_count: result.attendees_count }
-            : e
-        ));
-      }
-    } catch (error) {
-      console.error('Error unregistering from event:', error);
-    }
-  };
-
-  // ============ FILES HANDLERS ============
-
-  const loadFiles = async () => {
-    try {
-      const filesData = await getFiles(user?.id || null);
-      setFiles(filesData);
-    } catch (error) {
-      console.error('Error loading files:', error);
-    }
-  };
-
-  const handleUploadFile = async (file: File, metadata: any) => {
-    if (!user || !isAdmin) return;
-
-    try {
-      const fileId = await uploadFile(file, metadata, user.id);
-      if (fileId) {
-        // Track with PostHog
-        if (typeof window !== 'undefined' && (window as any).posthog) {
-          (window as any).posthog.capture('community_file_uploaded', {
-            file_type: metadata.file_type,
-            category: metadata.category,
-            file_size: file.size
-          });
-        }
-
-        await loadFiles();
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-    }
-  };
-
-  const handleDownloadFile = async (fileId: string, fileUrl: string) => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    try {
-      const result = await downloadFile(fileId, user.id);
-      if (result?.success && result.file_url) {
-        // Update local state
-        setFiles(files.map(f =>
-          f.id === fileId
-            ? { ...f, download_count: result.new_count, user_downloaded: true }
-            : f
-        ));
-
-        // Open file in new tab
-        window.open(result.file_url, '_blank');
-
-        // Track with PostHog
-        if (typeof window !== 'undefined' && (window as any).posthog) {
-          (window as any).posthog.capture('community_file_downloaded', { file_id: fileId });
-        }
-      }
-    } catch (error) {
-      console.error('Error downloading file:', error);
-    }
-  };
-
-  const handleDeleteFile = async (fileId: string) => {
-    if (!user || !isAdmin) return;
-
-    try {
-      const success = await deleteFile(fileId, user.id);
-      if (success) {
-        setFiles(files.filter(f => f.id !== fileId));
-      }
-    } catch (error) {
-      console.error('Error deleting file:', error);
-    }
+    return date.toLocaleDateString('ar-SA');
   };
 
   const handleCreatePost = async (data: { title: string; content: string; category: string; imageUrl?: string }) => {
@@ -422,7 +184,7 @@ const CommunityPage: React.FC = () => {
 
     setSubmitting(true);
     try {
-      // CRITICAL FIX: Force session refresh to ensure auth.uid() is set properly
+      // Force session refresh to ensure auth.uid() is set properly
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session) {
@@ -436,7 +198,7 @@ const CommunityPage: React.FC = () => {
       console.log('[Post Creation] Context user ID:', user.id);
 
       const { data: newPost, error } = await supabase.from('community_posts').insert({
-        user_id: session.user.id,  // Use session.user.id to ensure it matches auth.uid()
+        user_id: session.user.id,
         title: data.title,
         content: data.content,
         image_url: data.imageUrl,
@@ -459,7 +221,7 @@ const CommunityPage: React.FC = () => {
         });
       }
 
-      loadData(); // Reload all data
+      loadData();
     } catch (error) {
       console.error('Exception creating post:', error);
       alert('حدث خطأ غير متوقع أثناء إنشاء المنشور');
@@ -468,167 +230,232 @@ const CommunityPage: React.FC = () => {
     }
   };
 
-  const displayedPosts = posts.filter(post => {
-    if (activeFilter === 'general') return true;
-    return post.category === activeFilter;
-  });
+  const handleLike = async (postId: string) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    await togglePostLike(postId);
+    loadData();
+  };
+
+  const handleLoadComments = async (postId: string) => {
+    const comments = await getCommentsForPost(postId);
+    setPostComments(prev => ({ ...prev, [postId]: comments }));
+    setExpandedPosts(prev => new Set(prev).add(postId));
+  };
+
+  const handleAddComment = async (postId: string, content: string) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    await createComment(postId, content);
+    await handleLoadComments(postId);
+    loadData();
+  };
+
+  const handleLikeComment = async (commentId: string, postId: string) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    await toggleCommentLike(commentId);
+    await handleLoadComments(postId);
+  };
+
+  const handlePinPost = async (postId: string) => {
+    await togglePostPin(postId);
+    loadData();
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (confirm('هل أنت متأكد من حذف هذا المنشور؟')) {
+      await deletePost(postId);
+      loadData();
+    }
+  };
+
+  const handleCreateEvent = async (eventData: any) => {
+    try {
+      await createEvent(eventData);
+      setShowCreateEventModal(false);
+      loadEvents();
+    } catch (error) {
+      console.error('Error creating event:', error);
+      alert('فشل إنشاء الفعالية');
+    }
+  };
+
+  const handleRegisterForEvent = async (eventId: string) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    await registerForEvent(eventId);
+    loadEvents();
+  };
+
+  const handleUnregisterFromEvent = async (eventId: string) => {
+    await unregisterFromEvent(eventId);
+    loadEvents();
+  };
+
+  const handleUploadFile = async (fileData: any) => {
+    try {
+      await uploadFile(fileData);
+      setShowFileUploadModal(false);
+      loadFiles();
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('فشل رفع الملف');
+    }
+  };
+
+  const handleDownloadFile = async (fileId: string, fileName: string) => {
+    await downloadFile(fileId, fileName);
+  };
+
+  const handleDeleteFile = async (fileId: string) => {
+    if (confirm('هل أنت متأكد من حذف هذا الملف؟')) {
+      await deleteFile(fileId);
+      loadFiles();
+    }
+  };
+
+  // Filter posts by category when on posts tab
+  const displayedPosts = activeFilter === 'posts'
+    ? posts.filter(post => post.category === activeCategory)
+    : [];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center pt-20">
-        <Loader className="animate-spin text-[#CCFF00]" size={48} />
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#CCFF00] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">جاري التحميل...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f5] pt-20" dir="rtl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-          {/* Sidebar (Right in RTL) */}
-          <div className="lg:col-span-4 order-first lg:order-last">
-            <div className="sticky top-24 space-y-4">
-              <CommunitySidebar stats={stats} hasAccess={true} subscriptionStatus={null} trialDaysLeft={0} />
+        {/* Sidebar Column (Right in RTL) */}
+        <div className="hidden lg:block lg:col-span-4">
+          <div className="sticky top-24">
+            <CommunitySidebar stats={stats} />
+          </div>
+        </div>
 
-              {/* Admin Link - Only for admins */}
-              {isAdmin && (
-                <Link
-                  to="/community/admin"
-                  className="flex items-center justify-center gap-2 bg-gray-900 text-white rounded-xl p-4 hover:bg-gray-800 transition-colors"
-                >
-                  <Settings className="w-5 h-5" />
-                  <span className="font-bold">لوحة إدارة المجتمع</span>
-                </Link>
-              )}
-            </div>
+        {/* Main Content Column (Left in RTL) */}
+        <div className="lg:col-span-8">
+
+          {/* Main Tab Filters - المنشورات | الفعاليات | الملفات */}
+          <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+            {filters.map(filter => (
+              <button
+                key={filter.id}
+                onClick={() => setActiveFilter(filter.id)}
+                className={`px-6 py-2 rounded-full text-sm whitespace-nowrap transition-all font-bold border ${
+                  activeFilter === filter.id
+                    ? 'bg-[#CCFF00] text-gray-900 border-[#CCFF00]'
+                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
           </div>
 
-          {/* Main Content (Left in RTL) */}
-          <div className="lg:col-span-8">
+          {/* Content Area Based on Active Filter */}
+          {activeFilter === 'posts' && (
+            <>
+              {/* Post Composer - Only for logged in users */}
+              {user ? (
+                <div className="mb-6">
+                  <NewPostComposer onSubmit={handleCreatePost} isLoading={submitting} />
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6 text-center">
+                  <p className="text-gray-600 mb-4">سجل دخولك للمشاركة في المجتمع</p>
+                  <button
+                    onClick={() => navigate('/login')}
+                    className="bg-[#CCFF00] text-gray-900 font-bold px-6 py-2 rounded-lg hover:bg-[#b8e600] transition-colors"
+                  >
+                    تسجيل الدخول
+                  </button>
+                </div>
+              )}
 
-            {/* Main Tabs: Posts, Events, Files */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
-              <div className="flex">
-                <button
-                  onClick={() => setActiveTab('posts')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-4 font-bold transition-all border-b-2 ${
-                    activeTab === 'posts'
-                      ? 'text-gray-900 border-[#CCFF00] bg-[#CCFF00]/5'
-                      : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <MessageSquare className="w-5 h-5" />
-                  <span>المنشورات</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('events')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-4 font-bold transition-all border-b-2 ${
-                    activeTab === 'events'
-                      ? 'text-gray-900 border-[#CCFF00] bg-[#CCFF00]/5'
-                      : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <Calendar className="w-5 h-5" />
-                  <span>الفعاليات</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('files')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-4 font-bold transition-all border-b-2 ${
-                    activeTab === 'files'
-                      ? 'text-gray-900 border-[#CCFF00] bg-[#CCFF00]/5'
-                      : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <FileText className="w-5 h-5" />
-                  <span>الملفات</span>
-                </button>
+              {/* Category Sub-filters for Posts */}
+              <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2">
+                {categoryFilters.map(filter => (
+                  <button
+                    key={filter.id}
+                    onClick={() => setActiveCategory(filter.id)}
+                    className={`px-5 py-2 rounded-full text-sm whitespace-nowrap transition-all font-bold border ${
+                      activeCategory === filter.id
+                        ? 'bg-[#CCFF00] text-gray-900 border-[#CCFF00]'
+                        : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
               </div>
+
+              {/* Posts List */}
+              <div className="space-y-4">
+                {displayedPosts.length > 0 ? (
+                  displayedPosts.map(post => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      onLike={() => handleLike(post.id)}
+                      onLoadComments={handleLoadComments}
+                      onAddComment={handleAddComment}
+                      onLikeComment={handleLikeComment}
+                      comments={postComments[post.id] || []}
+                      isAdmin={isAdmin}
+                      onPin={handlePinPost}
+                      onDelete={handleDeletePost}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-12 bg-white rounded-xl border border-gray-200 border-dashed">
+                    <p className="text-gray-400 font-medium">لا توجد منشورات في هذا القسم بعد</p>
+                    {user && (
+                      <p className="text-gray-400 text-sm mt-2">كن أول من يشارك!</p>
+                    )}
+                  </div>
+                )}
+
+                {displayedPosts.length > 0 && (
+                  <div className="mt-8 text-center pb-10">
+                    <p className="text-gray-400 text-sm">لقد وصلت إلى نهاية المنشورات</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {activeFilter === 'events' && (
+            <div className="animate-in fade-in duration-300">
+              <CommunityCalendar
+                events={events}
+                onRegister={handleRegisterForEvent}
+                onUnregister={handleUnregisterFromEvent}
+                onCreateEvent={isAdmin ? () => setShowCreateEventModal(true) : undefined}
+                isAdmin={isAdmin}
+              />
             </div>
+          )}
 
-            {/* Tab Content */}
-            {activeTab === 'posts' && (
-              <>
-                {/* Post Composer - Only for logged in users */}
-                {user && (
-                  <div className="mb-6">
-                    <NewPostComposer onSubmit={handleCreatePost} isLoading={submitting} />
-                  </div>
-                )}
-
-                {/* Not logged in message */}
-                {!user && (
-                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6 text-center">
-                    <p className="text-gray-600 mb-4">سجل دخولك للمشاركة في المجتمع</p>
-                    <button
-                      onClick={() => navigate('/login')}
-                      className="bg-[#CCFF00] text-gray-900 font-bold px-6 py-2 rounded-lg hover:bg-[#b8e600] transition-colors"
-                    >
-                      تسجيل الدخول
-                    </button>
-                  </div>
-                )}
-
-                {/* Category Filters */}
-                <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2">
-                  {filters.map(filter => (
-                    <button
-                      key={filter.id}
-                      onClick={() => setActiveFilter(filter.id)}
-                      className={`px-5 py-2 rounded-full text-sm whitespace-nowrap transition-all font-bold border ${
-                        activeFilter === filter.id
-                          ? 'bg-[#CCFF00] text-gray-900 border-[#CCFF00]'
-                          : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-900'
-                      }`}
-                    >
-                      {filter.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Posts List */}
-                <div className="space-y-4">
-                  {displayedPosts.length > 0 ? (
-                    displayedPosts.map(post => (
-                      <PostCard
-                        key={post.id}
-                        post={post}
-                        onLike={() => handleLike(post.id)}
-                        onLoadComments={handleLoadComments}
-                        onAddComment={handleAddComment}
-                        onLikeComment={handleLikeComment}
-                        comments={postComments[post.id] || []}
-                        isAdmin={isAdmin}
-                        onPin={handlePinPost}
-                        onDelete={handleDeletePost}
-                      />
-                    ))
-                  ) : (
-                    <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-                      <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 font-medium">لا توجد منشورات بعد</p>
-                      {user && (
-                        <p className="text-gray-400 text-sm mt-2">كن أول من يشارك!</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {activeTab === 'events' && (
-              <>
-                <CommunityCalendar
-                  events={events}
-                  onRegister={handleRegisterForEvent}
-                  onUnregister={handleUnregisterFromEvent}
-                  onCreateEvent={isAdmin ? () => setShowCreateEventModal(true) : undefined}
-                  isAdmin={isAdmin}
-                />
-              </>
-            )}
-
-            {activeTab === 'files' && (
+          {activeFilter === 'files' && (
+            <div className="animate-in fade-in duration-300">
               <FileHub
                 files={files}
                 onDownload={handleDownloadFile}
@@ -636,9 +463,9 @@ const CommunityPage: React.FC = () => {
                 onUpload={isAdmin ? () => setShowFileUploadModal(true) : undefined}
                 isAdmin={isAdmin}
               />
-            )}
+            </div>
+          )}
 
-          </div>
         </div>
       </div>
 
