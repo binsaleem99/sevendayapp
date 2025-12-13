@@ -1,0 +1,53 @@
+-- Create resources table for lesson downloadable files
+create table if not exists resources (
+  id uuid primary key default gen_random_uuid(),
+  lesson_id text not null,
+  title text not null,
+  description text,
+  file_url text not null,
+  file_type text not null, -- 'pdf', 'zip', 'xlsx', etc.
+  file_size_kb integer,
+  icon text default 'FileText', -- lucide icon name
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
+);
+
+-- Add index on lesson_id for faster queries
+create index if not exists resources_lesson_id_idx on resources(lesson_id);
+
+-- Enable RLS
+alter table resources enable row level security;
+
+-- Allow all authenticated users to read resources
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+    AND tablename = 'resources'
+    AND policyname = 'Anyone can view resources'
+  ) THEN
+    CREATE POLICY "Anyone can view resources"
+      ON resources FOR SELECT
+      TO authenticated
+      USING (true);
+  END IF;
+END $$;
+
+-- Insert sample resources for day 1
+insert into resources (lesson_id, title, description, file_url, file_type, icon) values
+  ('day1-intro', 'دليل الأدوات المجانية', 'قائمة شاملة بأفضل الأدوات المجانية لبناء التطبيقات', 'https://example.com/tools-guide.pdf', 'pdf', 'FileText'),
+  ('day1-intro', 'قوالب التصميم', 'قوالب جاهزة للاستخدام في تطبيقك', 'https://example.com/design-templates.zip', 'zip', 'Archive'),
+  ('day1-intro', 'ملف المتابعة', 'جدول لمتابعة تقدمك اليومي', 'https://example.com/progress-tracker.xlsx', 'xlsx', 'FileSpreadsheet');
+
+-- Insert sample resources for day 2
+insert into resources (lesson_id, title, description, file_url, file_type, icon) values
+  ('day2-setup', 'دليل إعداد البيئة', 'خطوات تفصيلية لإعداد بيئة التطوير', 'https://example.com/setup-guide.pdf', 'pdf', 'FileText'),
+  ('day2-setup', 'أكواد جاهزة للاستخدام', 'مجموعة من الأكواد الجاهزة', 'https://example.com/code-snippets.zip', 'zip', 'Archive');
+
+-- Insert sample resources for day 3
+insert into resources (lesson_id, title, description, file_url, file_type, icon) values
+  ('day3-design', 'مكتبة الأيقونات', 'مجموعة من الأيقونات المجانية', 'https://example.com/icons.zip', 'zip', 'Archive'),
+  ('day3-design', 'دليل الألوان', 'أفضل تركيبات الألوان للتطبيقات', 'https://example.com/colors-guide.pdf', 'pdf', 'FileText');
+
+-- Comment on table
+comment on table resources is 'Downloadable resources for each lesson';

@@ -1,0 +1,33 @@
+{
+  "baseUrl": "http://localhost:3002",
+  "hashRouter": true,
+  "testAccounts": {
+    "regularUser": {
+      "email": "testuser_7dayapp@test.com",
+      "password": "TestUser123!@#",
+      "fullName": "مستخدم تجريبي",
+      "role": "user",
+      "created": false
+    },
+    "adminUser": {
+      "email": "testadmin_7dayapp@test.com",
+      "password": "TestAdmin123!@#",
+      "fullName": "مدير تجريبي",
+      "role": "admin",
+      "created": false
+    },
+    "communityAdmin": {
+      "email": "testcommunity_7dayapp@test.com",
+      "password": "TestCommunity123!@#",
+      "fullName": "مشرف المجتمع",
+      "role": "community_admin",
+      "created": false
+    }
+  },
+  "testStartTime": "2025-12-13T17:50:00.000Z",
+  "testEndTime": "",
+  "totalTests": 0,
+  "passed": 0,
+  "failed": 0,
+  "fixed": 0
+}
