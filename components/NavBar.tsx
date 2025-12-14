@@ -25,17 +25,17 @@ export const NavBar: React.FC = () => {
                   مرحباً، {profile.name}
                 </span>
               )}
-              {/* Logged in WITHOUT purchase - show free lessons + community + unlock button */}
+              {/* Logged in WITHOUT purchase - show free lessons + community */}
               {!user.hasPurchased ? (
                 <>
                   <Link to="/course" className="text-sm text-gray-400 hover:text-white transition-colors">
-                    الدروس المجانية
+                    الدورة
                   </Link>
-                  <Link to="/community" className="text-sm text-gray-400 hover:text-[#CCFF00] transition-colors">
+                  <Link to="/community" className="text-sm text-gray-400 hover:text-[#CCFF00] transition-colors relative">
                     المجتمع
-                  </Link>
-                  <Link to="/checkout" className="text-sm font-bold text-[#CCFF00] hover:text-white transition-colors flex items-center gap-1">
-                    🔓 فتح الدورة
+                    <span className="absolute -top-1 -left-10 text-[10px] bg-[#CCFF00]/20 text-[#CCFF00] px-1.5 py-0.5 rounded font-medium">
+                      قريباً
+                    </span>
                   </Link>
                   <button onClick={signOut} className="text-sm text-gray-400 hover:text-white transition-colors">
                     تسجيل خروج
@@ -49,8 +49,11 @@ export const NavBar: React.FC = () => {
                       الدورة
                     </Link>
                   )}
-                  <Link to="/community" className="text-sm text-gray-400 hover:text-[#CCFF00] transition-colors">
+                  <Link to="/community" className="text-sm text-gray-400 hover:text-[#CCFF00] transition-colors relative">
                     المجتمع
+                    <span className="absolute -top-1 -left-10 text-[10px] bg-[#CCFF00]/20 text-[#CCFF00] px-1.5 py-0.5 rounded font-medium">
+                      قريباً
+                    </span>
                   </Link>
                   <button onClick={signOut} className="text-sm text-gray-400 hover:text-white transition-colors">
                     تسجيل خروج

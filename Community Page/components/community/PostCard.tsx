@@ -1,67 +1,27 @@
-import React, { useState } from 'react';
-import { Pin, MessageSquare, Heart, MoreHorizontal, UserPlus } from 'lucide-react';
-import { Post } from '../../types/community';
+import React from 'react';
+import { Post } from '../../types';
+import { Pin, MessageSquare, Heart, Lock, MoreHorizontal, UserPlus } from 'lucide-react';
 import CommentSection from './CommentSection';
-import AdminPostMenu from './AdminPostMenu';
 
 interface PostCardProps {
   post: Post;
-  onLike?: () => void;
-  onLoadComments?: (postId: string) => void;
-  onAddComment?: (postId: string, content: string) => void;
-  onLikeComment?: (commentId: string, postId: string) => void;
-  comments?: any[];
-  isAdmin?: boolean;
-  onPin?: (postId: string) => void;
-  onDelete?: (postId: string) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({
-  post,
-  onLike,
-  onLoadComments,
-  onAddComment,
-  onLikeComment,
-  comments = [],
-  isAdmin = false,
-  onPin,
-  onDelete
-}) => {
-  const [showComments, setShowComments] = useState(false);
-
-  const handleToggleComments = () => {
-    if (!showComments && onLoadComments) {
-      onLoadComments(post.id);
-    }
-    setShowComments(!showComments);
-  };
-
-  const handleAddComment = (content: string) => {
-    if (onAddComment) {
-      onAddComment(post.id, content);
-    }
-  };
-
-  const handleLikeComment = (commentId: string) => {
-    if (onLikeComment) {
-      onLikeComment(commentId, post.id);
-    }
-  };
-
+const PostCard: React.FC<PostCardProps> = ({ post }) => {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 relative overflow-hidden group hover:border-gray-300 transition-colors">
-
+      
       {/* Header */}
       <div className="p-5 pb-0 flex justify-between items-start">
         <div className="flex gap-3">
           <div className="relative">
              <img
-                src={post.author.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(post.author.full_name)}
+                src={post.author.avatar_url}
                 alt={post.author.full_name}
                 className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm"
              />
              {/* Level Badge - Lime */}
-             <div className="absolute -bottom-1 -left-1 w-5 h-5 bg-[#CCFF00] rounded-full flex items-center justify-center text-[10px] font-bold text-gray-900 border-2 border-white shadow-sm">
+             <div className="absolute -bottom-1 -left-1 w-5 h-5 bg-lime-accent rounded-full flex items-center justify-center text-[10px] font-bold text-gray-900 border-2 border-white shadow-sm">
                  {post.author.level}
              </div>
           </div>
@@ -81,7 +41,7 @@ const PostCard: React.FC<PostCardProps> = ({
             </div>
           </div>
         </div>
-
+        
         <div className="flex items-center gap-2">
             {post.is_pinned && (
             <div className="flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs font-bold">
@@ -89,28 +49,18 @@ const PostCard: React.FC<PostCardProps> = ({
                 <span>مثبت</span>
             </div>
             )}
-            {isAdmin && onPin && onDelete && (
-              <AdminPostMenu
-                postId={post.id}
-                isPinned={post.is_pinned}
-                onPin={() => onPin(post.id)}
-                onDelete={() => onDelete(post.id)}
-              />
-            )}
-            {!isAdmin && (
-              <button className="text-gray-400 hover:bg-gray-100 p-1 rounded transition-colors">
-                  <MoreHorizontal className="w-4 h-4" />
-              </button>
-            )}
+            <button className="text-gray-400 hover:bg-gray-100 p-1 rounded transition-colors">
+                <MoreHorizontal className="w-4 h-4" />
+            </button>
         </div>
       </div>
 
-      {/* Content - Fully Visible */}
+      {/* Content - Fully Visible for Everyone (Ungated) */}
       <div className="px-5 py-4 relative">
         <h2 className="text-lg font-bold text-gray-900 mb-2 leading-snug">
           {post.title}
         </h2>
-
+        
         <div className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
           {post.content}
         </div>
@@ -123,11 +73,11 @@ const PostCard: React.FC<PostCardProps> = ({
       </div>
 
       {/* Footer Actions */}
-      <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between bg-gray-50/30">
+      <div className={`px-5 py-3 border-t border-gray-100 flex items-center justify-between ${post.is_locked ? 'bg-gray-50/50' : 'bg-gray-50/30'}`}>
         <div className="flex gap-4">
-            {/* If locked/guest, disable interactions */}
+            {/* If locked, disable interactions but show counts */}
             {post.is_locked ? (
-                <div className="flex items-center gap-4 opacity-50 cursor-not-allowed" title="يجب الانضمام للمشاركة">
+                <div className="flex items-center gap-4 opacity-50 cursor-not-allowed" title="الأعضاء فقط يمكنهم المشاركة">
                     <div className="flex items-center gap-1.5 text-gray-500">
                         <Heart className="w-4 h-4" />
                         <span className="text-xs font-bold">{post.likes_count}</span>
@@ -139,17 +89,11 @@ const PostCard: React.FC<PostCardProps> = ({
                 </div>
             ) : (
                 <>
-                    <button
-                      onClick={onLike}
-                      className="flex items-center gap-1.5 text-gray-500 hover:text-red-500 transition-colors group/btn"
-                    >
+                    <button className="flex items-center gap-1.5 text-gray-500 hover:text-red-500 transition-colors group/btn">
                         <Heart className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
                         <span className="text-xs font-bold">{post.likes_count}</span>
                     </button>
-                    <button
-                      onClick={handleToggleComments}
-                      className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors"
-                    >
+                    <button className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors">
                         <MessageSquare className="w-4 h-4" />
                         <span className="text-xs font-bold">{post.comments_count}</span>
                     </button>
@@ -157,9 +101,9 @@ const PostCard: React.FC<PostCardProps> = ({
             )}
         </div>
 
-        {/* Participants or CTA */}
+        {/* Friendly Call to Action for Guests */}
         {post.is_locked ? (
-            <button className="flex items-center gap-1 text-xs font-bold text-lime-700 hover:text-lime-800 transition-colors">
+            <button className="flex items-center gap-1.5 bg-lime-100 hover:bg-lime-200 text-lime-800 border border-lime-200 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm">
                 <UserPlus className="w-3.5 h-3.5" />
                 <span>انضم للمشاركة</span>
             </button>
@@ -167,28 +111,18 @@ const PostCard: React.FC<PostCardProps> = ({
             post.participants && post.participants.length > 0 && (
                 <div className="flex items-center gap-3">
                     <div className="flex -space-x-2 space-x-reverse">
-                        {post.participants.slice(0, 3).map((avatar, i) => (
+                        {post.participants.map((avatar, i) => (
                             <img key={i} src={avatar} alt="Participant" className="w-6 h-6 rounded-full border-2 border-white shadow-sm" />
                         ))}
                     </div>
-                    {post.participants.length > 3 && (
-                      <span className="text-xs text-gray-500 font-medium">
-                        +{post.participants.length - 3}
-                      </span>
-                    )}
                 </div>
             )
         )}
       </div>
 
-      {/* Comments Section */}
-      {showComments && comments && comments.length > 0 && (
-        <CommentSection
-          postId={post.id}
-          comments={comments}
-          onAddComment={handleAddComment}
-          onLikeComment={handleLikeComment}
-        />
+      {/* Comments - Visible but ReadOnly if locked */}
+      {post.comments && post.comments.length > 0 && (
+          <CommentSection comments={post.comments} isReadOnly={post.is_locked} />
       )}
     </div>
   );

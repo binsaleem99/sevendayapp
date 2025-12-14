@@ -4,9 +4,10 @@ import { Heart } from 'lucide-react';
 
 interface CommentSectionProps {
   comments?: Comment[];
+  isReadOnly?: boolean;
 }
 
-const CommentSection: React.FC<CommentSectionProps> = ({ comments = [] }) => {
+const CommentSection: React.FC<CommentSectionProps> = ({ comments = [], isReadOnly = false }) => {
   if (comments.length === 0) return null;
 
   return (
@@ -36,11 +37,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({ comments = [] }) => {
               </p>
             </div>
             <div className="flex items-center gap-4 mt-1 mr-2 text-[10px] text-gray-500 font-bold">
-              <button className="hover:text-red-500 flex items-center gap-1 transition-colors">
+              <button className={`flex items-center gap-1 transition-colors ${isReadOnly ? 'cursor-default opacity-60' : 'hover:text-red-500'}`}>
                 <Heart className="w-3 h-3" />
                 <span>{comment.likes}</span>
               </button>
-              <button className="hover:text-gray-800 transition-colors">رد</button>
+              {!isReadOnly && (
+                <button className="hover:text-gray-800 transition-colors">رد</button>
+              )}
             </div>
           </div>
         </div>

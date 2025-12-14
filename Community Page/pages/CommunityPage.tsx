@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import PostCard from './PostCard';
-import NewPostComposer from './NewPostComposer';
-import CommunitySidebar from './CommunitySidebar';
-import Calendar from './Calendar';
-import FileHub from './FileHub';
+import PostCard from '../components/community/PostCard';
+import NewPostComposer from '../components/community/NewPostComposer';
+import CommunitySidebar from '../components/community/CommunitySidebar';
+import CommunityCalendar from '../components/community/CommunityCalendar';
+import CommunityFiles from '../components/community/CommunityFiles';
 import { Post, CommunityStats } from '../types';
 import { Send, Mail } from 'lucide-react';
 
@@ -37,7 +37,7 @@ const CommunityPage: React.FC = () => {
         is_admin: true
       },
       title: 'أهلاً بكم في مجتمع داي آب! 🚀',
-      content: 'نحن سعداء جداً بانضمامكم إلينا. هذا المجتمع مخصص لمساعدتكم في رحلتكم التعليمية.',
+      content: 'نحن سعداء جداً بانضمامكم إلينا. هذا المجتمع مخصص لمساعدتكم في رحلتكم التعليمية. جميع المحتويات متاحة للجميع!',
       category: 'general',
       created_at: 'منذ يومين',
       is_pinned: true,
@@ -56,14 +56,14 @@ const CommunityPage: React.FC = () => {
         is_admin: false
       },
       title: 'كيف أبدأ في تعلم React؟',
-      content: 'مرحباً جميعاً، أنا جديد في عالم البرمجة وأريد تعلم React.',
+      content: 'مرحباً جميعاً، أنا جديد في عالم البرمجة وأريد تعلم React. هل من نصائح؟',
       category: 'general',
       created_at: 'منذ 3 ساعات',
       is_pinned: false,
       likes_count: 8,
       comments_count: 3,
       participants: ['https://picsum.photos/seed/p4/50/50', 'https://picsum.photos/seed/p5/50/50'],
-      is_locked: true
+      is_locked: true // This post is visible but requires membership to interact
     },
     {
         id: '4',
@@ -160,11 +160,11 @@ const CommunityPage: React.FC = () => {
             </div>
           ) : activeFilter === 'calendar' ? (
             <div className="animate-in fade-in duration-300">
-              <Calendar />
+              <CommunityCalendar />
             </div>
           ) : activeFilter === 'files' ? (
             <div className="animate-in fade-in duration-300">
-              <FileHub />
+              <CommunityFiles />
             </div>
           ) : (
             /* Posts Feed for General and Success */

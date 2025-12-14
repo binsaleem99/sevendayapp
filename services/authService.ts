@@ -63,7 +63,8 @@ const translateError = (error: any): string => {
 export const signUp = async (
   email: string,
   password: string,
-  name: string
+  name: string,
+  phoneNumber?: string
 ): Promise<{ user: SupabaseUser | null; error: string | null }> => {
   try {
     // Validate password length
@@ -93,6 +94,7 @@ export const signUp = async (
           id: data.user.id,
           name: name.trim(),
           email: email.toLowerCase().trim(),
+          phone_number: phoneNumber?.trim() || null,
           is_admin: false
         } as any);
 

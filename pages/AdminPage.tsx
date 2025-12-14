@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, DollarSign, PlayCircle, Award, BarChart3, TrendingUp, RefreshCw, Eye, ArrowUpRight, ShieldAlert, CheckCircle, XCircle, ArrowDownRight, Crown, MessageCircle } from 'lucide-react';
+import { Users, DollarSign, PlayCircle, Award, BarChart3, TrendingUp, RefreshCw, Eye, ArrowUpRight, ShieldAlert, CheckCircle, XCircle, ArrowDownRight, Crown, MessageCircle, Calendar, Mail, Gift, FileText, Target, Zap } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/Button';
@@ -25,7 +25,7 @@ import {
 import { getCommunityStats } from '../services/communityService';
 
 const AdminPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'purchases' | 'analytics' | 'traffic' | 'community'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'purchases' | 'analytics' | 'traffic' | 'community' | 'leads' | 'bookings' | 'emails' | 'referrals' | 'content'>('overview');
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
@@ -154,11 +154,16 @@ const AdminPage: React.FC = () => {
         <div className="max-w-7xl mx-auto flex gap-4">
           {[
             { id: 'overview', label: 'نظرة عامة', icon: BarChart3 },
+            { id: 'leads', label: 'إدارة العملاء (CRM)', icon: Target },
             { id: 'users', label: 'المستخدمين', icon: Users },
             { id: 'purchases', label: 'المشتريات', icon: DollarSign },
+            { id: 'bookings', label: 'الحجوزات', icon: Calendar },
+            { id: 'emails', label: 'الأتمتة', icon: Zap },
+            { id: 'referrals', label: 'الإحالات', icon: Gift },
+            { id: 'content', label: 'المحتوى', icon: FileText },
             { id: 'analytics', label: 'التحليلات', icon: TrendingUp },
-            { id: 'traffic', label: 'مصادر الزيارات', icon: Eye },
-            { id: 'community', label: 'المجتمع', icon: MessageCircle }
+            { id: 'community', label: 'المجتمع', icon: MessageCircle },
+            { id: 'traffic', label: 'مصادر الزيارات', icon: Eye }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -405,6 +410,7 @@ const AdminPage: React.FC = () => {
                   <thead>
                     <tr className="text-gray-400 text-sm border-b border-[#222]">
                       <th className="text-right pb-4">المستخدم</th>
+                      <th className="text-right pb-4">رقم الهاتف</th>
                       <th className="text-right pb-4">تاريخ التسجيل</th>
                       <th className="text-right pb-4">حالة الشراء</th>
                       <th className="text-right pb-4">المبلغ</th>
@@ -416,6 +422,9 @@ const AdminPage: React.FC = () => {
                         <td className="py-4">
                           <p className="font-medium">{user.name}</p>
                           <p className="text-gray-400 text-sm">{user.email}</p>
+                        </td>
+                        <td className="py-4 text-gray-400">
+                          {(user as any).phone_number || <span className="text-gray-600">-</span>}
                         </td>
                         <td className="py-4 text-gray-400">{formatDate(user.created_at)}</td>
                         <td className="py-4">
@@ -740,6 +749,360 @@ const AdminPage: React.FC = () => {
                 <h3 className="text-2xl font-bold text-white mb-1">{communityStats.monthlyRevenue.toFixed(3)} د.ك</h3>
                 <p className="text-sm text-gray-400">الإيرادات الشهرية</p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Leads/CRM Tab */}
+        {activeTab === 'leads' && (
+          <div className="space-y-6">
+            {/* Lead Pipeline Overview */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {[
+                { stage: 'عميل جديد', count: 0, color: 'blue' },
+                { stage: 'تواصل أولي', count: 0, color: 'cyan' },
+                { stage: 'متفاعل', count: 0, color: 'green' },
+                { stage: 'مؤهل', count: 0, color: 'yellow' },
+                { stage: 'موعد محجوز', count: 0, color: 'orange' }
+              ].map((item, idx) => (
+                <div key={idx} className="bg-[#111] border border-[#222] rounded-xl p-4">
+                  <p className="text-2xl font-bold text-[#CCFF00] mb-1">{item.count}</p>
+                  <p className="text-xs text-gray-400">{item.stage}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Lead Scoring System */}
+            <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Target className="text-[#CCFF00]" size={20} />
+                نظام تسجيل النقاط
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { action: 'فتح البريد الإلكتروني', points: 10, icon: Mail },
+                  { action: 'النقر على الرابط', points: 20, icon: Eye },
+                  { action: 'تسجيل في ندوة', points: 30, icon: Calendar },
+                  { action: 'حضور ندوة', points: 50, icon: CheckCircle },
+                  { action: 'حجز موعد', points: 70, icon: Calendar },
+                  { action: 'عتبة المبيعات', points: 80, icon: Award }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-[#1a1a1a] rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-[#CCFF00]/10 rounded-lg flex items-center justify-center">
+                        <item.icon className="text-[#CCFF00]" size={18} />
+                      </div>
+                      <span className="text-sm text-gray-300">{item.action}</span>
+                    </div>
+                    <span className="text-[#CCFF00] font-bold">+{item.points}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                <p className="text-sm text-green-400 font-bold">
+                  ✅ عتبة المبيعات: 80+ نقطة - تفعيل التواصل الشخصي
+                </p>
+              </div>
+            </div>
+
+            {/* 10 Pipeline Stages Details */}
+            <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+              <h3 className="text-xl font-bold mb-4">مراحل خط الأنابيب (10 مراحل)</h3>
+              <div className="space-y-3">
+                {[
+                  { num: 1, ar: 'عميل جديد', en: 'New Lead', desc: 'Just captured' },
+                  { num: 2, ar: 'تواصل أولي', en: 'Initial Contact', desc: 'First touchpoint' },
+                  { num: 3, ar: 'متفاعل', en: 'Engaged', desc: 'Consuming content' },
+                  { num: 4, ar: 'مهتم', en: 'Interested', desc: 'Buying signals' },
+                  { num: 5, ar: 'مؤهل', en: 'Qualified', desc: 'Meets buyer criteria' },
+                  { num: 6, ar: 'موعد محجوز', en: 'Call Scheduled', desc: 'Booking confirmed' },
+                  { num: 7, ar: 'مكالمة مكتملة', en: 'Call Completed', desc: 'Discovery done' },
+                  { num: 8, ar: 'عرض مرسل', en: 'Offer Sent', desc: 'Proposal delivered' },
+                  { num: 9, ar: 'تفاوض', en: 'Negotiation', desc: 'Discussing terms' },
+                  { num: 10, ar: 'مكتمل/فائز', en: 'Won', desc: 'Customer acquired' }
+                ].map((stage) => (
+                  <div key={stage.num} className="flex items-center gap-4 bg-[#1a1a1a] rounded-lg p-4">
+                    <div className="w-8 h-8 bg-[#CCFF00] rounded-full flex items-center justify-center text-black font-bold text-sm">
+                      {stage.num}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-white">{stage.ar}</p>
+                      <p className="text-xs text-gray-400">{stage.en} - {stage.desc}</p>
+                    </div>
+                    <span className="text-gray-600 text-sm">0 عملاء</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-6 text-center">
+              <Zap className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
+              <p className="text-yellow-400 font-bold mb-2">قيد التطوير</p>
+              <p className="text-sm text-gray-400">نظام CRM الكامل قيد التطوير. سيتم إضافة جميع الميزات قريباً.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Bookings Tab */}
+        {activeTab === 'bookings' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <Calendar className="text-blue-500" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">0</h3>
+                <p className="text-gray-400 text-sm">مواعيد محجوزة</p>
+              </div>
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <CheckCircle className="text-green-500" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">0</h3>
+                <p className="text-gray-400 text-sm">مواعيد مكتملة</p>
+              </div>
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-red-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <XCircle className="text-red-500" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">0</h3>
+                <p className="text-gray-400 text-sm">مواعيد ملغاة</p>
+              </div>
+            </div>
+
+            <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+              <h3 className="text-xl font-bold mb-4">آلية 72 ساعة</h3>
+              <div className="space-y-3">
+                {[
+                  { time: 'فوراً', action: 'تأكيد الحجز + تقويم', icon: CheckCircle },
+                  { time: '72 ساعة قبل', action: 'إرسال نموذج الاستعداد', icon: FileText },
+                  { time: '24 ساعة قبل', action: 'تذكير أول', icon: Mail },
+                  { time: '1 ساعة قبل', action: 'تذكير نهائي', icon: Mail }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-4 bg-[#1a1a1a] rounded-lg p-4">
+                    <div className="w-10 h-10 bg-[#CCFF00]/10 rounded-lg flex items-center justify-center">
+                      <item.icon className="text-[#CCFF00]" size={18} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-white text-sm">{item.time}</p>
+                      <p className="text-xs text-gray-400">{item.action}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-6 text-center">
+              <Calendar className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
+              <p className="text-yellow-400 font-bold mb-2">قيد التطوير</p>
+              <p className="text-sm text-gray-400">نظام الحجوزات قيد التطوير. يمكنك التكامل مع Cal.com أو Calendly حالياً.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Email Automation Tab */}
+        {activeTab === 'emails' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <Mail className="text-blue-500" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">0</h3>
+                <p className="text-gray-400 text-sm">رسائل مرسلة</p>
+              </div>
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <Eye className="text-green-500" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">0%</h3>
+                <p className="text-gray-400 text-sm">معدل الفتح</p>
+              </div>
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <Zap className="text-purple-500" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">12</h3>
+                <p className="text-gray-400 text-sm">قواعد تلقائية</p>
+              </div>
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-[#CCFF00]/20 rounded-lg flex items-center justify-center mb-4">
+                  <Target className="text-[#CCFF00]" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">0%</h3>
+                <p className="text-gray-400 text-sm">معدل التحويل</p>
+              </div>
+            </div>
+
+            <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+              <h3 className="text-xl font-bold mb-4">12 قاعدة أتمتة</h3>
+              <div className="space-y-3">
+                {[
+                  { trigger: 'عميل جديد', action: 'سلسلة ترحيب (5 رسائل / 7 أيام)', status: 'قريباً' },
+                  { trigger: 'نقاط 80+', action: 'تنبيه الإدارة + رسالة شخصية', status: 'قريباً' },
+                  { trigger: 'تسجيل ندوة', action: 'سلسلة ما قبل الندوة', status: 'قريباً' },
+                  { trigger: 'غياب عن ندوة', action: 'إعادة العرض + الإلحاح', status: 'قريباً' },
+                  { trigger: 'حضور ندوة', action: 'سلسلة العروض + رابط الحجز', status: 'قريباً' },
+                  { trigger: 'موعد محجوز', action: 'تذكيرات (24س، 1س)', status: 'قريباً' },
+                  { trigger: 'غياب عن موعد', action: 'سلسلة إعادة جدولة', status: 'قريباً' },
+                  { trigger: 'عرض مرسل', action: 'متابعة (3 نقاط اتصال)', status: 'قريباً' },
+                  { trigger: 'سلة متروكة', action: 'استرداد + خصم', status: 'قريباً' },
+                  { trigger: 'شراء مكتمل', action: 'سلسلة الإعداد', status: 'قريباً' },
+                  { trigger: 'غير نشط 30 يوم', action: 'حملة إعادة التفاعل', status: 'قريباً' },
+                  { trigger: 'استخدام إحالة', action: 'شكر + إشعار مكافأة', status: 'قريباً' }
+                ].map((rule, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-[#1a1a1a] rounded-lg p-4">
+                    <div className="flex-1">
+                      <p className="font-bold text-white text-sm">{rule.trigger}</p>
+                      <p className="text-xs text-gray-400">{rule.action}</p>
+                    </div>
+                    <span className="text-xs bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-lg">
+                      {rule.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-6 text-center">
+              <Zap className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
+              <p className="text-yellow-400 font-bold mb-2">قيد التطوير</p>
+              <p className="text-sm text-gray-400">نظام الأتمتة بالبريد الإلكتروني متكامل مع Postmark قيد التطوير.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Referrals Tab */}
+        {activeTab === 'referrals' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <Gift className="text-purple-500" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">0</h3>
+                <p className="text-gray-400 text-sm">أكواد إحالة نشطة</p>
+              </div>
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <Users className="text-green-500" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">0</h3>
+                <p className="text-gray-400 text-sm">تسجيلات عبر الإحالة</p>
+              </div>
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <DollarSign className="text-blue-500" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">0 د.ك</h3>
+                <p className="text-gray-400 text-sm">إيرادات الإحالات</p>
+              </div>
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-[#CCFF00]/20 rounded-lg flex items-center justify-center mb-4">
+                  <TrendingUp className="text-[#CCFF00]" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">0%</h3>
+                <p className="text-gray-400 text-sm">معدل التحويل</p>
+              </div>
+            </div>
+
+            <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold">أكواد الإحالة</h3>
+                <button className="bg-[#CCFF00] text-black px-4 py-2 rounded-lg font-bold hover:bg-[#b8e600] transition-colors opacity-50 cursor-not-allowed" disabled>
+                  + إنشاء كود جديد
+                </button>
+              </div>
+              <p className="text-gray-400 text-center py-12">لا توجد أكواد إحالة بعد</p>
+            </div>
+
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-6 text-center">
+              <Gift className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
+              <p className="text-yellow-400 font-bold mb-2">قيد التطوير</p>
+              <p className="text-sm text-gray-400">نظام الإحالات والمكافآت قيد التطوير.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Content Management Tab */}
+        {activeTab === 'content' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <FileText className="text-blue-500" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">0</h3>
+                <p className="text-gray-400 text-sm">مقالات المدونة</p>
+              </div>
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <PlayCircle className="text-purple-500" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">7</h3>
+                <p className="text-gray-400 text-sm">وحدات الدورة</p>
+              </div>
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <MessageCircle className="text-green-500" size={24} />
+                </div>
+                <h3 className="text-2xl font-bold">{communityStats.totalPosts}</h3>
+                <p className="text-gray-400 text-sm">منشورات المجتمع</p>
+              </div>
+            </div>
+
+            <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+              <h3 className="text-xl font-bold mb-4">وحدات الدورة (7 وحدات)</h3>
+              <div className="space-y-3">
+                {[
+                  { num: 1, title: 'توليد الأفكار والتحقق', status: 'مجاني', color: 'green' },
+                  { num: 2, title: 'بحث السوق والتموضع', status: 'مجاني', color: 'green' },
+                  { num: 3, title: 'إعداد الملفات والهيكلة', status: 'مدفوع', color: 'yellow' },
+                  { num: 4, title: 'التنفيذ بدون كود', status: 'مدفوع', color: 'yellow' },
+                  { num: 5, title: 'بناء MVP', status: 'مدفوع', color: 'yellow' },
+                  { num: 6, title: 'النشر للإنتاج', status: 'مدفوع', color: 'yellow' },
+                  { num: 7, title: 'التسويق والنمو', status: 'مميز', color: 'purple' }
+                ].map((module) => (
+                  <div key={module.num} className="flex items-center justify-between bg-[#1a1a1a] rounded-lg p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-[#CCFF00] rounded-full flex items-center justify-center text-black font-bold">
+                        {module.num}
+                      </div>
+                      <p className="font-bold text-white">{module.title}</p>
+                    </div>
+                    <span className={`text-xs px-3 py-1 rounded-lg ${
+                      module.color === 'green' ? 'bg-green-500/20 text-green-400' :
+                      module.color === 'yellow' ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-purple-500/20 text-purple-400'
+                    }`}>
+                      {module.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button className="bg-[#111] border border-[#222] rounded-xl p-6 hover:bg-[#1a1a1a] transition-colors text-right opacity-50 cursor-not-allowed" disabled>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <FileText className="text-blue-500" size={20} />
+                  </div>
+                  <h4 className="font-bold">إضافة مقال جديد</h4>
+                </div>
+                <p className="text-sm text-gray-500">إنشاء محتوى مدونة بالذكاء الاصطناعي</p>
+                <span className="text-xs text-gray-600 mt-2 inline-block">قريباً</span>
+              </button>
+
+              <Link to="/community/admin" className="bg-[#111] border border-[#222] rounded-xl p-6 hover:bg-[#1a1a1a] transition-colors text-right block">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <MessageCircle className="text-green-500" size={20} />
+                  </div>
+                  <h4 className="font-bold">إدارة المجتمع</h4>
+                </div>
+                <p className="text-sm text-gray-500">مراقبة المنشورات والفعاليات</p>
+              </Link>
             </div>
           </div>
         )}

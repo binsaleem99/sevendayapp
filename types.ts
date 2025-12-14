@@ -15,6 +15,7 @@ export interface Module {
 export interface User {
   name: string;
   email: string;
+  phone_number?: string;
   hasPurchased: boolean;
   hasUpsell: boolean; // The 60 KWD meeting
   completedLessons: string[]; // IDs of completed lessons

@@ -7,12 +7,13 @@ import { useAuth } from '../contexts/AuthContext';
 export const SignupPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { refreshUser } = useAuth();
+  const { refreshUser} = useAuth();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +34,7 @@ export const SignupPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const { user, error: signUpError } = await signUp(email, password, name);
+      const { user, error: signUpError } = await signUp(email, password, name, phoneNumber);
 
       if (signUpError) {
         setError(signUpError);
@@ -96,6 +97,20 @@ export const SignupPage: React.FC = () => {
               placeholder="you@example.com"
               dir="ltr"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-400 mb-2">رقم الهاتف</label>
+            <input
+              type="tel"
+              required
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="w-full bg-[#1a1a1a] border border-[#333] p-4 text-white focus:outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00] transition-all text-left"
+              placeholder="+965 XXXX XXXX"
+              dir="ltr"
+            />
+            <p className="text-xs text-gray-500 mt-1">مثال: +965 12345678</p>
           </div>
 
           <div>

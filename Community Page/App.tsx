@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Navbar from './components/Navbar';
-import CommunityPage from './components/CommunityPage';
+import CommunityPage from './pages/CommunityPage';
 import Classroom from './components/Classroom';
 
 function App() {
